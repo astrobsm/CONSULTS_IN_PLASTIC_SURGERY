@@ -9,6 +9,4 @@ python-multipart>=0.0.6
 pydantic[email]>=2.5.3
 pydantic-settings>=2.1.0
 python-dotenv>=1.0.0
-aiofiles>=23.2.1
-Pillow>=10.4.0
 httpx==0.26.0
