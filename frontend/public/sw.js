@@ -9,7 +9,7 @@
  * - SPA navigation fallback to cached index.html
  * - Background sync messaging to client
  */
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `ps-consult-static-${CACHE_VERSION}`;
 const API_CACHE = `ps-consult-api-${CACHE_VERSION}`;
 const IMAGE_CACHE = `ps-consult-images-${CACHE_VERSION}`;

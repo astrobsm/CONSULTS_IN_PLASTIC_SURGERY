@@ -7,9 +7,12 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Save, Camera, Upload } from 'lucide-react';
+import { ArrowLeft, Save, Camera, Upload, Share2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { reviewsAPI } from '../api/client';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { format } from 'date-fns';
+import { reviewsAPI, consultsAPI } from '../api/client';
 import { PageHeader, Card } from '../components/SharedUI';
 
 const WOUND_CLASSIFICATIONS = [
@@ -32,6 +35,8 @@ export default function ReviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [savedReview, setSavedReview] = useState(null);
+  const [consult, setConsult] = useState(null);
 
   const {
     register,
@@ -63,9 +68,14 @@ export default function ReviewPage() {
       if (!cleaned.procedure_date) delete cleaned.procedure_date;
       if (!cleaned.follow_up_date) delete cleaned.follow_up_date;
 
-      await reviewsAPI.create(id, cleaned);
+      const reviewRes = await reviewsAPI.create(id, cleaned);
+      // Fetch consult details for PDF generation
+      try {
+        const consultRes = await consultsAPI.get(id);
+        setConsult(consultRes.data);
+      } catch { /* proceed without consult data */ }
+      setSavedReview({ ...cleaned, ...reviewRes.data, created_at: new Date().toISOString() });
       toast.success('Review saved successfully!');
-      navigate(`/consults/${id}`);
     } catch (err) {
       const detail = err.response?.data?.detail;
       const msg = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(e => e.msg || JSON.stringify(e)).join('; ') : 'Failed to save review';
@@ -74,6 +84,133 @@ export default function ReviewPage() {
       setSubmitting(false);
     }
   };
+
+  /** Generate PDF from the saved review + consult */
+  function buildPDF() {
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PLASTIC SURGERY CONSULT REVIEW', pw / 2, 18, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('University of Nigeria Teaching Hospital (UNTH), Ituku-Ozalla', pw / 2, 25, { align: 'center' });
+    doc.setDrawColor(0, 102, 153);
+    doc.setLineWidth(0.5);
+    doc.line(14, 28, pw - 14, 28);
+
+    let y = 35;
+
+    if (consult) {
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Patient Information', 14, y);
+      y += 2;
+      doc.autoTable({
+        startY: y,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 102, 153] },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
+        body: [
+          ['Consult ID', consult.consult_id],
+          ['Patient Name', consult.patient_name],
+          ['Hospital Number', consult.hospital_number],
+          ['Age / Sex', `${consult.age} yrs / ${consult.sex}`],
+          ['Ward', consult.ward],
+          ['Primary Diagnosis', consult.primary_diagnosis],
+          ['Indication', consult.indication],
+          ['Inviting Unit', consult.inviting_unit],
+          ['Requesting Doctor', consult.requesting_doctor],
+          ['Urgency', consult.urgency?.replace('_', ' ').toUpperCase()],
+        ],
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Review Details', 14, y);
+    y += 2;
+
+    const rows = [
+      ['Assessment Notes', savedReview.assessment_notes || '—'],
+    ];
+    if (savedReview.wound_classification) rows.push(['Wound Classification', savedReview.wound_classification.replace('_', ' ')]);
+    if (savedReview.wound_phase) rows.push(['Wound Phase', savedReview.wound_phase]);
+    if (savedReview.wound_location) rows.push(['Wound Location', savedReview.wound_location]);
+    if (savedReview.wound_length || savedReview.wound_width || savedReview.wound_depth) {
+      rows.push(['Wound Size (cm)', `L: ${savedReview.wound_length || '—'} × W: ${savedReview.wound_width || '—'} × D: ${savedReview.wound_depth || '—'}`]);
+    }
+    if (savedReview.management_plan) rows.push(['Management Plan', savedReview.management_plan]);
+    if (savedReview.procedure_scheduled) {
+      rows.push(['Procedure Scheduled', 'Yes']);
+      if (savedReview.procedure_date) rows.push(['Procedure Date', savedReview.procedure_date]);
+      if (savedReview.procedure_details) rows.push(['Procedure Details', savedReview.procedure_details]);
+    }
+    if (savedReview.follow_up_date) rows.push(['Follow-up Date', savedReview.follow_up_date]);
+    if (savedReview.follow_up_notes) rows.push(['Follow-up Notes', savedReview.follow_up_notes]);
+
+    doc.autoTable({
+      startY: y,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 102, 153] },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
+      body: rows,
+    });
+
+    y = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(120);
+    doc.text('Generated by PS Consult – UNTH. For clinical use only.', pw / 2, y, { align: 'center' });
+    return doc;
+  }
+
+  function handleDownloadPDF() {
+    const doc = buildPDF();
+    doc.save(`Review_Consult_${id}.pdf`);
+    toast.success('PDF downloaded');
+  }
+
+  function handleShareWhatsApp() {
+    const c = consult;
+    const r = savedReview;
+    const lines = [
+      '*PLASTIC SURGERY CONSULT REVIEW*',
+      'UNTH, Ituku-Ozalla',
+      '',
+    ];
+    if (c) {
+      lines.push(
+        `*Patient:* ${c.patient_name}`,
+        `*Hospital No:* ${c.hospital_number}`,
+        `*Age/Sex:* ${c.age} yrs / ${c.sex}`,
+        `*Ward:* ${c.ward}`,
+        `*Diagnosis:* ${c.primary_diagnosis}`,
+        `*Indication:* ${c.indication}`,
+        `*Inviting Unit:* ${c.inviting_unit}`,
+        '',
+      );
+    }
+    lines.push(
+      '--- REVIEW ---',
+      `*Assessment:* ${r.assessment_notes || '—'}`,
+    );
+    if (r.wound_classification) lines.push(`*Wound:* ${r.wound_classification.replace('_', ' ')}`);
+    if (r.management_plan) lines.push(`*Plan:* ${r.management_plan}`);
+    if (r.procedure_scheduled) lines.push(`*Procedure:* Scheduled${r.procedure_date ? ' — ' + r.procedure_date : ''}`);
+    if (r.follow_up_date) lines.push(`*Follow-up:* ${r.follow_up_date}`);
+    lines.push('', '_Sent from PS Consult – UNTH_');
+
+    const text = encodeURIComponent(lines.join('\n'));
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+
+    handleDownloadPDF();
+    toast.success('PDF downloaded — attach it in WhatsApp');
+  }
 
   const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -107,6 +244,41 @@ export default function ReviewPage() {
           </button>
         }
       />
+
+      {/* Post-submit success panel */}
+      {savedReview ? (
+        <Card className="mb-6">
+          <div className="text-center py-4">
+            <div className="text-4xl mb-3">✅</div>
+            <h2 className="text-lg font-bold text-slate-800 mb-1">Review Saved Successfully</h2>
+            <p className="text-sm text-slate-500 mb-6">Share the review summary with the inviting unit via WhatsApp or download the PDF.</p>
+
+            <div className="flex flex-wrap justify-center gap-3 mb-6">
+              <button
+                onClick={handleShareWhatsApp}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors"
+              >
+                <Share2 size={18} />
+                Share on WhatsApp
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors"
+              >
+                <Download size={18} />
+                Download PDF
+              </button>
+            </div>
+
+            <button
+              onClick={() => navigate(`/app/consults/${id}`)}
+              className="text-sm text-primary-600 hover:text-primary-800 font-medium underline"
+            >
+              ← Back to Consult Detail
+            </button>
+          </div>
+        </Card>
+      ) : (
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Assessment */}
@@ -284,6 +456,7 @@ export default function ReviewPage() {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }
