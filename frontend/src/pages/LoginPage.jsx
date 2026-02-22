@@ -14,6 +14,9 @@ import {
 import toast from 'react-hot-toast';
 import { consultsAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useOnlineStatus } from '../context/OnlineStatusContext';
+import { useInstallPrompt } from '../context/InstallPromptContext';
+import { saveOfflineConsult } from '../db/offlineDb';
 
 // ── Constants ───────────────────────────────────────
 const WARDS = [
@@ -47,6 +50,8 @@ const INDICATION_CATEGORIES = [
 export default function LoginPage() {
   const navigate = useNavigate();
   const { codeLogin } = useAuth();
+  const { isOnline, refreshPendingCount } = useOnlineStatus();
+  const { isInstallable, promptInstall } = useInstallPrompt();
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -94,6 +99,25 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
+      if (!isOnline) {
+        // Save offline when no network
+        const { clientId } = await saveOfflineConsult(data);
+        await refreshPendingCount();
+        setResult({
+          type: 'offline',
+          data: {
+            consult_id: clientId,
+            received_at: new Date().toISOString(),
+          },
+        });
+        removePhoto();
+        toast.success('Saved offline! Will sync when you reconnect.', {
+          icon: '📡',
+          duration: 5000,
+        });
+        return;
+      }
+
       const res = await consultsAPI.createPublic(data);
 
       // Upload photo if attached
@@ -104,7 +128,6 @@ export default function LoginPage() {
           fd.append('description', 'Clinical photograph');
           await consultsAPI.uploadPhotoPublic(res.data.consult_id, fd);
         } catch {
-          // Photo upload failure is non-blocking
           toast.error('Consult saved but photo upload failed.');
         }
       }
@@ -113,6 +136,30 @@ export default function LoginPage() {
       removePhoto();
       toast.success('Consult request submitted successfully!');
     } catch (err) {
+      // If the error is a network error (not a server validation error), save offline
+      if (!err.response) {
+        try {
+          const { clientId } = await saveOfflineConsult(data);
+          await refreshPendingCount();
+          setResult({
+            type: 'offline',
+            data: {
+              consult_id: clientId,
+              received_at: new Date().toISOString(),
+            },
+          });
+          removePhoto();
+          toast.success('Network error — saved offline! Will sync automatically.', {
+            icon: '📡',
+            duration: 5000,
+          });
+          return;
+        } catch {
+          toast.error('Failed to save offline. Please try again.');
+          return;
+        }
+      }
+
       const detail = err.response?.data?.detail;
       let msg = 'Failed to submit. Please try again.';
       if (typeof detail === 'string') {
@@ -163,8 +210,13 @@ export default function LoginPage() {
             <img src="/unth-logo.png" alt="UNTH" className="mx-auto mb-3 w-16 h-16 object-contain" />
             <CheckCircle2 className="mx-auto mb-4 text-emerald-500" size={56} />
             <h2 className="text-xl font-bold text-emerald-800 mb-2">
-              Consult Request Received!
+              {result.type === 'offline' ? 'Saved Offline!' : 'Consult Request Received!'}
             </h2>
+            {result.type === 'offline' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-sm text-amber-700 mb-4">
+                <strong>Offline Mode:</strong> Your consult has been saved locally and will be submitted automatically when you reconnect to the internet.
+              </div>
+            )}
             <div className="text-sm text-emerald-700 space-y-1 mb-4">
               <div>
                 <strong>Consult ID:</strong> {result.data.consult_id}
@@ -178,9 +230,18 @@ export default function LoginPage() {
                 hrs
               </div>
             </div>
-            <p className="text-sm text-emerald-700 mb-6">
+            <p className="text-sm text-emerald-700 mb-4">
               The Plastic Surgery Unit has been notified. You will receive a response shortly.
             </p>
+
+            {/* Unit Contact */}
+            <div className="flex items-center justify-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-sm text-blue-800 mb-4">
+              <Phone size={15} className="text-blue-600 flex-shrink-0" />
+              <span>
+                Unit Mobile: <a href="tel:+2349046348126" className="font-semibold underline hover:text-blue-600 transition-colors">+234 904 634 8126</a>
+              </span>
+            </div>
+
             <div className="inline-block bg-amber-50 rounded-lg px-4 py-2 text-sm text-amber-700 border border-amber-200 mb-6">
               Status: <span className="font-semibold">Pending Review</span>
             </div>
@@ -231,13 +292,29 @@ export default function LoginPage() {
             <p className="text-[10px] text-blue-200/60">Plastic Surgery Unit</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowLoginModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors border border-white/20"
-        >
-          <Lock size={12} />
-          Plastic Team Login
-        </button>
+        <div className="flex items-center gap-2">
+          {isInstallable && (
+            <button
+              onClick={promptInstall}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-white text-xs font-medium transition-colors"
+            >
+              <Send size={12} />
+              Install App
+            </button>
+          )}
+          {!isOnline && (
+            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/80 text-white text-[10px] font-medium">
+              Offline
+            </span>
+          )}
+          <button
+            onClick={() => setShowLoginModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors border border-white/20"
+          >
+            <Lock size={12} />
+            Plastic Team Login
+          </button>
+        </div>
       </div>
 
       {/* Hero Section */}

@@ -18,9 +18,11 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
+import { useInstallPrompt } from '../context/InstallPromptContext';
 import { dashboardAPI } from '../api/client';
 
 const NAV_ITEMS = [
@@ -35,6 +37,7 @@ const NAV_ITEMS = [
 export default function Layout() {
   const { user, logout, hasRole } = useAuth();
   const { isOnline, pendingCount, syncing, attemptSync } = useOnlineStatus();
+  const { isInstallable, promptInstall } = useInstallPrompt();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -134,6 +137,19 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* Install App Button */}
+        {isInstallable && (
+          <div className="px-3 pb-2">
+            <button
+              onClick={promptInstall}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+            >
+              <Download size={18} />
+              Install App
+            </button>
+          </div>
+        )}
 
         {/* User info + logout */}
         <div className="p-4 border-t border-primary-700">

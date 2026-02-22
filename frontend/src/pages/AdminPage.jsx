@@ -3,10 +3,11 @@
  *
  * User management (list, create, update roles) and audit log viewer.
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, Edit2, Shield, Activity, Search, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Users, Plus, Edit2, Shield, Activity, Search, X, QrCode, Share2, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
+import { QRCodeSVG } from 'qrcode.react';
 import { authAPI, dashboardAPI } from '../api/client';
 import { PageHeader, Card, LoadingSpinner, EmptyState, ConfirmModal } from '../components/SharedUI';
 

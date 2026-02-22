@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "PS Consult – UNTH",
   "short_name": "PS Consult",
   "description": "Plastic Surgery Consult System – University of Nigeria Teaching Hospital",
@@ -8,6 +9,8 @@
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/",
+  "prefer_related_applications": false,
+  "categories": ["medical", "health", "productivity"],
   "icons": [
     {
       "src": "/unth-favicon.png",
@@ -29,6 +32,16 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "New Consult Request",
+      "short_name": "New Consult",
+      "url": "/",
+      "description": "Submit a new plastic surgery consult request",
+      "icons": [{ "src": "/unth-icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

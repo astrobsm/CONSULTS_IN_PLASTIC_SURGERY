@@ -28,7 +28,7 @@ export function OnlineStatusProvider({ children }) {
     setSyncing(true);
     try {
       const result = await syncAllPending(async (data) => {
-        await consultsAPI.create(data);
+        await consultsAPI.createPublic(data);
       });
       if (result.synced > 0) {
         toast.success(`${result.synced} offline consult(s) synced successfully!`, {
@@ -70,12 +70,21 @@ export function OnlineStatusProvider({ children }) {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Listen for sync messages from service worker
+    const swListener = (event) => {
+      if (event.data?.type === 'SYNC_CONSULTS') {
+        attemptSync();
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', swListener);
+
     // Check pending on mount
     refreshPendingCount();
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      navigator.serviceWorker?.removeEventListener('message', swListener);
     };
   }, [attemptSync, refreshPendingCount]);
 

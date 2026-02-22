@@ -4,15 +4,18 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
+import { InstallPromptProvider } from './context/InstallPromptContext';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <OnlineStatusProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <InstallPromptProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </InstallPromptProvider>
       </OnlineStatusProvider>
     </BrowserRouter>
   </React.StrictMode>
