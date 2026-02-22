@@ -18,7 +18,9 @@
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "react-hot-toast": "^2.5.2",
-    "lucide-react": "^0.468.0"
+    "lucide-react": "^0.468.0",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
