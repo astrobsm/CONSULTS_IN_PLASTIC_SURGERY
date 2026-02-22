@@ -22,7 +22,8 @@ import {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { applyPlugin } from 'jspdf-autotable';
+applyPlugin(jsPDF);
 import { consultsAPI, reviewsAPI } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -123,7 +124,7 @@ export default function ConsultDetailPage() {
     doc.text('Patient Information', 14, y);
     y += 2;
 
-    const t1 = autoTable(doc, {
+    doc.autoTable({
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [0, 102, 153] },
@@ -146,7 +147,7 @@ export default function ConsultDetailPage() {
       ],
     });
 
-    y = t1.finalY + 10;
+    y = doc.lastAutoTable.finalY + 10;
 
     // Review Details
     doc.setFontSize(12);
@@ -187,7 +188,7 @@ export default function ConsultDetailPage() {
       reviewRows.push(['Follow-up Notes', review.follow_up_notes]);
     }
 
-    const t2 = autoTable(doc, {
+    doc.autoTable({
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [0, 102, 153] },
@@ -196,7 +197,7 @@ export default function ConsultDetailPage() {
       body: reviewRows,
     });
 
-    y = t2.finalY + 12;
+    y = doc.lastAutoTable.finalY + 12;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(120);

@@ -10,7 +10,8 @@ import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save, Camera, Upload, Share2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { applyPlugin } from 'jspdf-autotable';
+applyPlugin(jsPDF);
 import { format } from 'date-fns';
 import { reviewsAPI, consultsAPI } from '../api/client';
 import { PageHeader, Card } from '../components/SharedUI';
@@ -107,7 +108,7 @@ export default function ReviewPage() {
       doc.setFont('helvetica', 'bold');
       doc.text('Patient Information', 14, y);
       y += 2;
-      const t1 = autoTable(doc, {
+      doc.autoTable({
         startY: y,
         theme: 'grid',
         headStyles: { fillColor: [0, 102, 153] },
@@ -126,7 +127,7 @@ export default function ReviewPage() {
           ['Urgency', consult.urgency?.replace('_', ' ').toUpperCase()],
         ],
       });
-      y = t1.finalY + 10;
+      y = doc.lastAutoTable.finalY + 10;
     }
 
     doc.setFontSize(12);
@@ -152,7 +153,7 @@ export default function ReviewPage() {
     if (savedReview.follow_up_date) rows.push(['Follow-up Date', savedReview.follow_up_date]);
     if (savedReview.follow_up_notes) rows.push(['Follow-up Notes', savedReview.follow_up_notes]);
 
-    const t2 = autoTable(doc, {
+    doc.autoTable({
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [0, 102, 153] },
@@ -161,7 +162,7 @@ export default function ReviewPage() {
       body: rows,
     });
 
-    y = t2.finalY + 12;
+    y = doc.lastAutoTable.finalY + 12;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(120);

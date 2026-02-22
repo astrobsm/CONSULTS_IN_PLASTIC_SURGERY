@@ -9,7 +9,7 @@
  * - SPA navigation fallback to cached index.html
  * - Background sync messaging to client
  */
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE = `ps-consult-static-${CACHE_VERSION}`;
 const API_CACHE = `ps-consult-api-${CACHE_VERSION}`;
 const IMAGE_CACHE = `ps-consult-images-${CACHE_VERSION}`;
@@ -79,7 +79,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const cache = caches.open(STATIC_CACHE).then((c) => { c.put('/index.html', response.clone()); });
+          const cloned = response.clone();
+          caches.open(STATIC_CACHE).then((c) => c.put('/index.html', cloned));
           return response;
         })
         .catch(() => caches.match('/index.html'))
