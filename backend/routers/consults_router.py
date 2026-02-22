@@ -334,12 +334,13 @@ async def update_consult_status(
     elif status_update.status == ConsultStatus.COMPLETED:
         consult.completed_at = now
 
-    # Notify the requesting unit
-    create_notification(
-        db, consult.created_by, consult.id,
-        title=f"Consult {consult.consult_id} – Status Update",
-        message=f"Status changed from {old_status.value} to {status_update.status.value}.",
-    )
+    # Notify the requesting unit (only if created_by is set)
+    if consult.created_by:
+        create_notification(
+            db, consult.created_by, consult.id,
+            title=f"Consult {consult.consult_id} – Status Update",
+            message=f"Status changed from {old_status.value} to {status_update.status.value}.",
+        )
 
     log_audit(
         db, AuditAction.STATUS_CHANGED, user_id=current_user.id,
@@ -359,7 +360,7 @@ async def acknowledge_consult(
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(
-        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT
+        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT, UserRole.ADMIN
     )),
 ):
     """Acknowledge receipt of consult (Stage 1 acknowledgement)."""
@@ -370,11 +371,12 @@ async def acknowledge_consult(
     consult.acknowledged_by = current_user.id
     consult.acknowledged_at = datetime.utcnow()
 
-    create_notification(
-        db, consult.created_by, consult.id,
-        title=f"Consult {consult.consult_id} Acknowledged",
-        message=f"Acknowledged by {current_user.full_name} at {consult.acknowledged_at.strftime('%H:%M hrs')}.",
-    )
+    if consult.created_by:
+        create_notification(
+            db, consult.created_by, consult.id,
+            title=f"Consult {consult.consult_id} Acknowledged",
+            message=f"Acknowledged by {current_user.full_name} at {consult.acknowledged_at.strftime('%H:%M hrs')}.",
+        )
 
     log_audit(
         db, AuditAction.MODIFIED, user_id=current_user.id,
