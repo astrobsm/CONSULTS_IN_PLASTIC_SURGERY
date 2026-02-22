@@ -65,7 +65,7 @@ export default function App() {
           <Route
             path="consults/:id/review"
             element={
-              <ProtectedRoute roles={['registrar', 'senior_registrar', 'consultant']}>
+              <ProtectedRoute roles={['registrar', 'senior_registrar', 'consultant', 'admin']}>
                 <ReviewPage />
               </ProtectedRoute>
             }

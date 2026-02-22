@@ -28,7 +28,7 @@ async def create_review(
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(
-        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT
+        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT, UserRole.ADMIN
     )),
 ):
     """Create a clinical review for a consult."""
@@ -85,7 +85,7 @@ async def update_review(
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(
-        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT
+        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT, UserRole.ADMIN
     )),
 ):
     """Update an existing review."""
@@ -115,7 +115,7 @@ async def upload_photo(
     description: str = Form(""),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(
-        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT
+        UserRole.REGISTRAR, UserRole.SENIOR_REGISTRAR, UserRole.CONSULTANT, UserRole.ADMIN
     )),
 ):
     """Upload a wound photo for a consult."""
