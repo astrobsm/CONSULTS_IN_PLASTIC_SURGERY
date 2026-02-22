@@ -51,9 +51,17 @@ export default function AdminPage() {
         >
           <Activity size={14} className="inline mr-1" /> Audit Log
         </button>
+        <button
+          onClick={() => setTab('qrcode')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            tab === 'qrcode' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <QrCode size={14} className="inline mr-1" /> QR Code
+        </button>
       </div>
 
-      {tab === 'users' ? <UsersTab /> : <AuditTab />}
+      {tab === 'users' ? <UsersTab /> : tab === 'audit' ? <AuditTab /> : <QRCodeTab />}
     </div>
   );
 }
@@ -342,6 +350,112 @@ function AuditTab() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ============ QR Code Tab ============ */
+function QRCodeTab() {
+  const qrRef = useRef(null);
+  const APP_URL = 'https://ps-consult-unth.vercel.app';
+
+  const downloadQR = () => {
+    const svg = qrRef.current?.querySelector('svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width * 2;
+      canvas.height = img.height * 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const link = document.createElement('a');
+      link.download = 'PS-Consult-UNTH-QR.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const shareQR = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'PS Consult \u2013 UNTH',
+          text: 'Request a Plastic Surgery Consult at UNTH. Scan the QR code or visit:',
+          url: APP_URL,
+        });
+      } catch {
+        // User cancelled
+      }
+    } else {
+      await navigator.clipboard.writeText(APP_URL);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
+  const printQR = () => {
+    const svg = qrRef.current?.querySelector('svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html><head><title>PS Consult QR Code</title>
+      <style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui,sans-serif;margin:0;}
+      h1{font-size:24px;color:#1e40af;margin-bottom:4px;}p{color:#64748b;font-size:14px;margin:4px 0;}img{margin:20px 0;}.url{font-size:12px;color:#0f172a;background:#f1f5f9;padding:8px 16px;border-radius:8px;}</style></head>
+      <body><h1>PS Consult &ndash; UNTH</h1><p>Plastic Surgery Consult System</p>
+      <img src="data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}" width="300" height="300" />
+      <p>Scan to request a consult</p><div class="url">${APP_URL}</div>
+      <script>setTimeout(()=>{window.print();},500);<\/script></body></html>
+    `);
+    win.document.close();
+  };
+
+  return (
+    <div className="max-w-md mx-auto">
+      <Card className="text-center">
+        <div className="mb-4">
+          <img src="/unth-logo.png" alt="UNTH" className="mx-auto w-14 h-14 object-contain mb-2" />
+          <h3 className="text-lg font-bold text-slate-800">Share PS Consult</h3>
+          <p className="text-sm text-slate-500 mt-1">Other units can scan this QR code to access the consult request form</p>
+        </div>
+
+        <div ref={qrRef} className="inline-block bg-white p-4 rounded-xl border-2 border-slate-100 shadow-sm">
+          <QRCodeSVG
+            value={APP_URL}
+            size={220}
+            level="H"
+            includeMargin={true}
+            imageSettings={{
+              src: '/unth-favicon.png',
+              x: undefined,
+              y: undefined,
+              height: 36,
+              width: 36,
+              excavate: true,
+            }}
+          />
+        </div>
+
+        <p className="text-xs text-slate-500 mt-3 mb-4 bg-slate-50 inline-block px-3 py-1.5 rounded-lg">
+          {APP_URL}
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-2 justify-center mt-2">
+          <button onClick={downloadQR} className="btn-primary text-sm flex items-center justify-center gap-2">
+            <Download size={15} /> Download QR
+          </button>
+          <button onClick={printQR} className="btn-secondary text-sm flex items-center justify-center gap-2">
+            <QrCode size={15} /> Print QR
+          </button>
+          <button onClick={shareQR} className="btn-secondary text-sm flex items-center justify-center gap-2">
+            <Share2 size={15} /> Share Link
+          </button>
+        </div>
+      </Card>
     </div>
   );
 }

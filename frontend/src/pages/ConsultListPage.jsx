@@ -271,7 +271,7 @@ export default function ConsultListPage() {
               <Card
                 key={c.id || c.consult_id}
                 className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => c.id && navigate(`/consults/${c.id}`)}
+                onClick={() => c.id && navigate(`/app/consults/${c.id}`)}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex-1 min-w-0">

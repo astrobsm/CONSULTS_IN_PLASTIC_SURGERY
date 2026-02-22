@@ -170,7 +170,7 @@ export default function ConsultDetailPage() {
             )}
             {['accepted', 'on_the_way'].includes(consult.status) && (
               <button
-                onClick={() => navigate(`/consults/${id}/review`)}
+                onClick={() => navigate(`/app/consults/${id}/review`)}
                 className="btn-success text-sm"
               >
                 Review & Document
