@@ -107,7 +107,7 @@ export default function ReviewPage() {
       doc.setFont('helvetica', 'bold');
       doc.text('Patient Information', 14, y);
       y += 2;
-      autoTable(doc, {
+      const t1 = autoTable(doc, {
         startY: y,
         theme: 'grid',
         headStyles: { fillColor: [0, 102, 153] },
@@ -126,7 +126,7 @@ export default function ReviewPage() {
           ['Urgency', consult.urgency?.replace('_', ' ').toUpperCase()],
         ],
       });
-      y = doc.previousAutoTable.finalY + 10;
+      y = t1.finalY + 10;
     }
 
     doc.setFontSize(12);
@@ -152,7 +152,7 @@ export default function ReviewPage() {
     if (savedReview.follow_up_date) rows.push(['Follow-up Date', savedReview.follow_up_date]);
     if (savedReview.follow_up_notes) rows.push(['Follow-up Notes', savedReview.follow_up_notes]);
 
-    autoTable(doc, {
+    const t2 = autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [0, 102, 153] },
@@ -161,7 +161,7 @@ export default function ReviewPage() {
       body: rows,
     });
 
-    y = doc.previousAutoTable.finalY + 12;
+    y = t2.finalY + 12;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(120);

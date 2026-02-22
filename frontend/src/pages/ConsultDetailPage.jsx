@@ -123,7 +123,7 @@ export default function ConsultDetailPage() {
     doc.text('Patient Information', 14, y);
     y += 2;
 
-    autoTable(doc, {
+    const t1 = autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [0, 102, 153] },
@@ -146,7 +146,7 @@ export default function ConsultDetailPage() {
       ],
     });
 
-    y = doc.previousAutoTable.finalY + 10;
+    y = t1.finalY + 10;
 
     // Review Details
     doc.setFontSize(12);
@@ -187,7 +187,7 @@ export default function ConsultDetailPage() {
       reviewRows.push(['Follow-up Notes', review.follow_up_notes]);
     }
 
-    autoTable(doc, {
+    const t2 = autoTable(doc, {
       startY: y,
       theme: 'grid',
       headStyles: { fillColor: [0, 102, 153] },
@@ -196,7 +196,7 @@ export default function ConsultDetailPage() {
       body: reviewRows,
     });
 
-    y = doc.previousAutoTable.finalY + 12;
+    y = t2.finalY + 12;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(120);
