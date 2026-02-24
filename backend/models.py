@@ -269,3 +269,18 @@ class Notification(Base):
     # Relationships
     user = relationship("User")
     consult = relationship("ConsultRequest")
+
+
+class PushSubscription(Base):
+    """Stores Web Push API subscriptions for push notifications."""
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint = Column(Text, nullable=False, unique=True)
+    p256dh = Column(String(255), nullable=False)
+    auth = Column(String(255), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User")

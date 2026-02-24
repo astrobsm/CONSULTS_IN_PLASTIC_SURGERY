@@ -13,3 +13,4 @@ python-dotenv>=1.0.0
 aiofiles>=23.2.1
 Pillow>=10.4.0
 httpx>=0.26.0
+pywebpush>=2.0.0

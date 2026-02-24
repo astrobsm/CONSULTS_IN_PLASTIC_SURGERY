@@ -9,7 +9,7 @@
  * - SPA navigation fallback to cached index.html
  * - Background sync messaging to client
  */
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const STATIC_CACHE = `ps-consult-static-${CACHE_VERSION}`;
 const API_CACHE = `ps-consult-api-${CACHE_VERSION}`;
 const IMAGE_CACHE = `ps-consult-images-${CACHE_VERSION}`;
@@ -153,28 +153,45 @@ async function notifyClientsToSync() {
   }
 }
 
-// ── Push Notifications (future) ─────────────────────
+// ── Push Notifications ──────────────────────────────
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  const data = event.data.json();
+  let data;
+  try { data = event.data.json(); } catch { data = { body: event.data.text() }; }
+  const tag = data.tag || 'ps-consult';
   event.waitUntil(
-    self.registration.showNotification(data.title || 'PS Consult – UNTH', {
+    self.registration.showNotification(data.title || '\uD83D\uDEA8 PS Consult – UNTH', {
       body: data.body || 'You have a new notification',
       icon: '/unth-icon-192.png',
       badge: '/unth-favicon.png',
-      tag: data.tag || 'ps-consult',
-      data: data.url ? { url: data.url } : undefined,
+      tag: tag,
+      renotify: true,          // vibrate again even if same tag
+      requireInteraction: true, // keep notification visible until dismissed
+      vibrate: [200, 100, 200, 100, 300], // aggressive vibrate pattern
+      data: { url: data.url || '/' },
+      actions: [
+        { action: 'open', title: 'View Consult' },
+        { action: 'dismiss', title: 'Dismiss' },
+      ],
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  if (event.action === 'dismiss') return;
   const url = event.notification.data?.url || '/';
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clients) => {
-      const existing = clients.find((c) => c.url.includes(url));
-      if (existing) return existing.focus();
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Try to focus an existing window and navigate it
+      for (const client of clients) {
+        if ('focus' in client) {
+          return client.focus().then((c) => {
+            if (c.navigate) return c.navigate(url);
+            return c;
+          });
+        }
+      }
       return self.clients.openWindow(url);
     })
   );

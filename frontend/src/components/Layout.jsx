@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
 import { useInstallPrompt } from '../context/InstallPromptContext';
 import { dashboardAPI } from '../api/client';
+import PushNotificationPrompt from './PushNotificationPrompt';
 
 const NAV_ITEMS = [
   { to: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: null },
@@ -74,6 +75,9 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
+      {/* Push notification permission prompt */}
+      <PushNotificationPrompt />
+
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div

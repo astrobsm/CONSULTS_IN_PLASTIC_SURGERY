@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
 import { useInstallPrompt } from '../context/InstallPromptContext';
 import { saveOfflineConsult } from '../db/offlineDb';
+import PushNotificationPrompt from '../components/PushNotificationPrompt';
 
 // ── Constants ───────────────────────────────────────
 const WARDS = [
@@ -278,6 +279,9 @@ export default function LoginPage() {
   // ── Main Landing Page ─────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-800 via-primary-900 to-slate-900 relative">
+      {/* Push notification prompt for returning visitors */}
+      <PushNotificationPrompt />
+
       {/* Full-page watermark */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
         <img src="/unth-logo.png" alt="" className="w-80 h-80 opacity-[0.04]" />

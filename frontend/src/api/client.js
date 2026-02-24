@@ -97,4 +97,11 @@ export const scheduleAPI = {
   remove: (id) => api.delete(`/schedule/${id}`),
 };
 
+// ── Push Notifications ──────────────────────────────
+export const pushAPI = {
+  getVapidKey: () => api.get('/push/vapid-public-key'),
+  subscribe: (subscription) => api.post('/push/subscribe', subscription),
+  unsubscribe: (endpoint) => api.post('/push/unsubscribe', { endpoint }),
+};
+
 export default api;

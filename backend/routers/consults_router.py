@@ -27,6 +27,7 @@ from schemas import (
     ConsultListResponse, ConsultAcknowledgement
 )
 from auth import get_current_user, require_roles, log_audit
+from routers.push_router import send_push_to_team
 
 router = APIRouter(prefix="/api/consults", tags=["Consult Requests"])
 
@@ -148,6 +149,19 @@ async def create_consult(
     db.commit()
     db.refresh(consult)
 
+    # Send push notification to the plastic surgery team
+    try:
+        urgency_label = consult.urgency.value.upper()
+        send_push_to_team(
+            db,
+            title=f"\U0001f6a8 New Consult \u2013 {urgency_label}",
+            body=f"{consult.patient_name} ({consult.ward}) \u2013 {consult.primary_diagnosis}. From: {consult.inviting_unit}",
+            url=f"/app/consults/{consult.id}",
+            tag=f"consult-{consult.consult_id}",
+        )
+    except Exception:
+        pass  # Push is best-effort, never block consult creation
+
     return ConsultAcknowledgement(
         status="success",
         consult_id=consult.consult_id,
@@ -218,6 +232,19 @@ async def create_consult_public(
 
     db.commit()
     db.refresh(consult)
+
+    # Send push notification to the plastic surgery team
+    try:
+        urgency_label = consult.urgency.value.upper()
+        send_push_to_team(
+            db,
+            title=f"\U0001f6a8 New Consult \u2013 {urgency_label}",
+            body=f"{consult.patient_name} ({consult.ward}) \u2013 {consult.primary_diagnosis}. From: {consult.inviting_unit}",
+            url=f"/app/consults/{consult.id}",
+            tag=f"consult-{consult.consult_id}",
+        )
+    except Exception:
+        pass  # Push is best-effort, never block consult creation
 
     return ConsultAcknowledgement(
         status="success",

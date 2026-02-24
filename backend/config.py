@@ -30,6 +30,20 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
 
+    # Web Push (VAPID) — set via environment variables in production
+    VAPID_PRIVATE_KEY: str = os.getenv(
+        "VAPID_PRIVATE_KEY",
+        "ZWq3h0H8V0zo_jAQTJp4lp5mC0Nc56TfDZW7WHnKcco"
+    )
+    VAPID_PUBLIC_KEY: str = os.getenv(
+        "VAPID_PUBLIC_KEY",
+        "BGmB4AXEVBI1P7sBJNr0x9VWxBHW4DAP_DTB2ieCt02hgXGRCePmibDJmDlfa4RJEbnCND_o-uW39oWA6IHIXZQ"
+    )
+    VAPID_CLAIMS_EMAIL: str = os.getenv(
+        "VAPID_CLAIMS_EMAIL",
+        "mailto:ps-consult@unth.edu.ng"
+    )
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

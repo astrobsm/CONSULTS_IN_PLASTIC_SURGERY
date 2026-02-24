@@ -73,6 +73,29 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    request: Request,
+    db: Session,
+) -> Optional[User]:
+    """Try to extract the current user from the Authorization header.
+    Returns None instead of raising if no valid token is present."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            return None
+        user = db.query(User).filter(User.username == username).first()
+        if user and user.is_active:
+            return user
+    except JWTError:
+        pass
+    return None
+
+
 def require_roles(*roles: UserRole):
     """Dependency factory: restrict endpoint to specific roles."""
     async def role_checker(current_user: User = Depends(get_current_user)):

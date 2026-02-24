@@ -38,6 +38,14 @@ export default function ReviewPage() {
   const [uploading, setUploading] = useState(false);
   const [savedReview, setSavedReview] = useState(null);
   const [consult, setConsult] = useState(null);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  // Load existing photos on mount
+  React.useEffect(() => {
+    reviewsAPI.listPhotos(id)
+      .then((res) => setPhotos(res.data || []))
+      .catch(() => {});
+  }, [id]);
 
   const {
     register,
@@ -223,13 +231,17 @@ export default function ReviewPage() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('description', '');
-        const res = await reviewsAPI.uploadPhoto(id, formData);
-        setPhotos((prev) => [...prev, res.data]);
+        await reviewsAPI.uploadPhoto(id, formData);
         toast.success(`Photo "${file.name}" uploaded`);
       } catch (err) {
         toast.error(`Failed to upload ${file.name}`);
       }
     }
+    // Reload all photos to get full data URLs
+    try {
+      const res = await reviewsAPI.listPhotos(id);
+      setPhotos(res.data || []);
+    } catch {}
     setUploading(false);
     e.target.value = '';
   };
@@ -366,13 +378,52 @@ export default function ReviewPage() {
             <span className="text-xs text-slate-500">JPEG, PNG, WebP — Max 10MB each</span>
           </div>
           {photos.length > 0 && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {photos.map((p, i) => (
-                <div key={p.id || i} className="bg-slate-100 rounded-lg p-2 text-xs text-center">
-                  <Upload size={16} className="mx-auto mb-1 text-slate-400" />
-                  {p.filename}
+                <div
+                  key={p.id || i}
+                  className="relative group cursor-pointer rounded-lg overflow-hidden border border-slate-200 hover:border-primary-400 transition-colors"
+                  onClick={() => setSelectedPhoto(p)}
+                >
+                  {p.url ? (
+                    <img
+                      src={p.url}
+                      alt={p.description || p.filename}
+                      className="w-full h-28 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-28 bg-slate-100 flex items-center justify-center">
+                      <Upload size={20} className="text-slate-400" />
+                    </div>
+                  )}
+                  <div className="p-1.5 text-xs text-slate-600 truncate">{p.filename}</div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Full-size Photo Modal */}
+          {selectedPhoto && selectedPhoto.url && (
+            <div
+              className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+              onClick={() => setSelectedPhoto(null)}
+            >
+              <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => setSelectedPhoto(null)}
+                  className="absolute -top-10 right-0 text-white text-sm hover:text-slate-300"
+                >
+                  ✕ Close
+                </button>
+                <img
+                  src={selectedPhoto.url}
+                  alt={selectedPhoto.description || selectedPhoto.filename}
+                  className="w-full max-h-[85vh] object-contain rounded-lg"
+                />
+                {selectedPhoto.description && (
+                  <div className="text-white text-sm text-center mt-2">{selectedPhoto.description}</div>
+                )}
+              </div>
             </div>
           )}
         </Card>

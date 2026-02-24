@@ -20,6 +20,7 @@ from routers.consults_router import router as consults_router
 from routers.reviews_router import router as reviews_router
 from routers.dashboard_router import router as dashboard_router
 from routers.schedule_router import router as schedule_router
+from routers.push_router import router as push_router
 
 # Create database tables on startup
 # Uses lifespan to handle gracefully when DB is not yet configured
@@ -67,6 +68,7 @@ app.include_router(consults_router)
 app.include_router(reviews_router)
 app.include_router(dashboard_router)
 app.include_router(schedule_router)
+app.include_router(push_router)
 
 
 @app.get("/api/health")
