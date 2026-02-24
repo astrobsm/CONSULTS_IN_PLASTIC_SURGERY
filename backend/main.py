@@ -23,12 +23,20 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app):
-    """Create tables on startup (safe for PostgreSQL — won't recreate existing)."""
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        import logging
-        logging.warning(f"Could not create tables (DB may not be configured yet): {e}")
+    """Application lifespan handler.
+    
+    Note: Table creation is skipped in production (Vercel serverless)
+    to avoid cold-start latency. Tables should be created via
+    migration scripts or the seed.py utility.
+    """
+    import logging
+    if os.getenv("VERCEL"):
+        logging.info("Vercel detected — skipping create_all for fast cold start")
+    else:
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception as e:
+            logging.warning(f"Could not create tables (DB may not be configured yet): {e}")
     yield
 
 app = FastAPI(

@@ -6,6 +6,7 @@ Supports SQLite (local dev) and PostgreSQL (Supabase production)
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 from config import settings
 
 # Handle Supabase connection string format (postgres:// → postgresql://)
@@ -27,11 +28,15 @@ if is_sqlite:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 else:
+    # NullPool is essential for serverless (Vercel) — no persistent connections
+    # connect_args timeout prevents hanging on slow Supabase connections
     engine = create_engine(
         db_url,
-        pool_size=5,
-        max_overflow=10,
-        pool_pre_ping=True,
+        poolclass=NullPool,
+        connect_args={
+            "connect_timeout": 10,
+            "options": "-c statement_timeout=25000",
+        },
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
