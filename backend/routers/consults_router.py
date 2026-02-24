@@ -390,6 +390,57 @@ async def acknowledge_consult(
     return ConsultRequestOut.model_validate(consult)
 
 
+@router.post("/public/{consult_id}/photo")
+async def upload_photo_public(
+    consult_id: str,
+    file: UploadFile = File(...),
+    description: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    """Upload a wound photo for a consult WITHOUT authentication (public access).
+    
+    The consult_id here is the string-based ID (e.g. PSC-2026-00004).
+    """
+    consult = db.query(ConsultRequest).filter(
+        ConsultRequest.consult_id == consult_id
+    ).first()
+    if not consult:
+        raise HTTPException(status_code=404, detail="Consult not found")
+
+    # Validate file type
+    allowed_types = {"image/jpeg", "image/png", "image/webp"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only JPEG, PNG, and WebP images are allowed")
+
+    # Validate file size
+    contents = await file.read()
+    if len(contents) > settings.MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    # Encode as base64 and store in database (serverless-friendly)
+    b64_data = base64.b64encode(contents).decode("utf-8")
+    filename = file.filename or "photo.jpg"
+
+    photo = Photo(
+        consult_id=consult.id,
+        filename=filename,
+        content_type=file.content_type,
+        data=b64_data,
+        description=description,
+        uploaded_by=None,
+    )
+    db.add(photo)
+    db.commit()
+    db.refresh(photo)
+
+    return {
+        "id": photo.id,
+        "filename": photo.filename,
+        "description": photo.description,
+        "uploaded_at": photo.uploaded_at.isoformat(),
+    }
+
+
 @router.post("/sync", response_model=list[ConsultAcknowledgement])
 async def sync_offline_consults(
     consults: list[ConsultRequestCreate],
