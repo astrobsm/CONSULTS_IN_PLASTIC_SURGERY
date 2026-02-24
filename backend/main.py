@@ -6,11 +6,15 @@ Deployment: Vercel (serverless) + Supabase (PostgreSQL)
 """
 
 import os
-from fastapi import FastAPI
+import base64
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from sqlalchemy.orm import Session
 
 from config import settings
-from database import engine, Base
+from database import engine, Base, get_db
+from models import Photo
 from routers.auth_router import router as auth_router
 from routers.consults_router import router as consults_router
 from routers.reviews_router import router as reviews_router
@@ -72,6 +76,27 @@ async def health_check():
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
     }
+
+
+@app.get("/api/photos/{photo_id}")
+async def serve_photo(photo_id: int, db: Session = Depends(get_db)):
+    """Serve a single photo as a binary image response.
+
+    This avoids embedding large base64 strings in JSON responses,
+    keeping list endpoints fast and under Vercel's response size limit.
+    """
+    photo = db.query(Photo).filter(Photo.id == photo_id).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    image_data = base64.b64decode(photo.data)
+    return Response(
+        content=image_data,
+        media_type=photo.content_type,
+        headers={
+            "Cache-Control": "public, max-age=86400",
+        },
+    )
 
 
 if __name__ == "__main__":

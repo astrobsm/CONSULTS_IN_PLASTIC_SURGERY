@@ -163,14 +163,14 @@ async def list_photos(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all photos for a consult."""
+    """List all photos for a consult (metadata only, no base64 data)."""
     photos = db.query(Photo).filter(Photo.consult_id == consult_id).all()
     return [
         {
             "id": p.id,
             "filename": p.filename,
             "description": p.description,
-            "url": f"data:{p.content_type};base64,{p.data}",
+            "url": f"/api/photos/{p.id}",
             "uploaded_at": p.uploaded_at.isoformat(),
         }
         for p in photos
