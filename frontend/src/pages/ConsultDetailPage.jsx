@@ -18,6 +18,8 @@ import {
   Shield,
   Share2,
   Download,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -51,9 +53,12 @@ export default function ConsultDetailPage() {
 
   const [consult, setConsult] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusModal, setStatusModal] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchConsult();
@@ -62,12 +67,14 @@ export default function ConsultDetailPage() {
   async function fetchConsult() {
     setLoading(true);
     try {
-      const [consultRes, reviewsRes] = await Promise.all([
+      const [consultRes, reviewsRes, photosRes] = await Promise.all([
         consultsAPI.get(id),
         reviewsAPI.list(id),
+        reviewsAPI.listPhotos(id).catch(() => ({ data: [] })),
       ]);
       setConsult(consultRes.data);
       setReviews(reviewsRes.data);
+      setPhotos(photosRes.data || []);
     } catch (err) {
       toast.error('Failed to load consult');
       navigate('/app/consults');
@@ -261,6 +268,30 @@ export default function ConsultDetailPage() {
     toast.success('PDF downloaded — you can attach it in WhatsApp');
   }
 
+  async function handlePhotoUpload(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setUploading(true);
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('description', '');
+        await reviewsAPI.uploadPhoto(id, formData);
+        toast.success(`Photo "${file.name}" uploaded`);
+      } catch (err) {
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+    // Reload photos
+    try {
+      const res = await reviewsAPI.listPhotos(id);
+      setPhotos(res.data || []);
+    } catch {}
+    setUploading(false);
+    e.target.value = '';
+  }
+
   if (loading) return <LoadingSpinner message="Loading consult..." />;
   if (!consult) return null;
 
@@ -431,6 +462,61 @@ export default function ConsultDetailPage() {
           </div>
         </Card>
 
+        {/* Clinical Photos */}
+        <Card className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+              📷 Clinical Photographs {photos.length > 0 && `(${photos.length})`}
+            </h3>
+            {canManage && (
+              <label className="btn-secondary text-sm flex items-center gap-2 cursor-pointer">
+                <Camera size={16} />
+                {uploading ? 'Uploading...' : 'Upload Photos'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                  disabled={uploading}
+                />
+              </label>
+            )}
+          </div>
+          {photos.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <Camera size={32} className="mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No clinical photographs uploaded yet.</p>
+              {canManage && (
+                <p className="text-xs mt-1">Use the "Upload Photos" button above to add images.</p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {photos.map((p) => (
+                <div
+                  key={p.id}
+                  className="relative group cursor-pointer rounded-lg overflow-hidden border border-slate-200 hover:border-primary-400 transition-colors"
+                  onClick={() => setSelectedPhoto(p)}
+                >
+                  <img
+                    src={p.url}
+                    alt={p.description || p.filename}
+                    className="w-full h-32 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  {p.description && (
+                    <div className="p-1.5 text-xs text-slate-600 truncate">{p.description}</div>
+                  )}
+                  <div className="px-1.5 pb-1.5 text-[10px] text-slate-400">
+                    {p.uploaded_at ? format(new Date(p.uploaded_at), 'dd MMM yyyy, HH:mm') : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
         {/* Reviews */}
         <Card>
           <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
@@ -491,6 +577,31 @@ export default function ConsultDetailPage() {
           )}
         </Card>
       </div>
+
+      {/* Full-size Photo Modal */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute -top-10 right-0 text-white text-sm hover:text-slate-300"
+            >
+              ✕ Close
+            </button>
+            <img
+              src={selectedPhoto.url}
+              alt={selectedPhoto.description || selectedPhoto.filename}
+              className="w-full max-h-[85vh] object-contain rounded-lg"
+            />
+            {selectedPhoto.description && (
+              <div className="text-white text-sm text-center mt-2">{selectedPhoto.description}</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Status Update Modal */}
       <ConfirmModal
